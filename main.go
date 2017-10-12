@@ -10,6 +10,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = GetEnergyConsumption()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	difficulty, err := GetDifficulty()
 	if err != nil {
 		log.Fatal(err)
@@ -20,7 +25,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Network Hashrate: %v", hashrate)
+	hashrate = hashrate / 1000 / 1000 / 1000 / 1000
+	log.Printf("Network Hashrate: %f TH/s", hashrate)
 	height := bi.BlockHeight
 	log.Printf("Height: %d\n", height)
 	log.Printf("Block reward halvings: %d\n", GetHalvings(height))
@@ -31,7 +37,7 @@ func main() {
 	log.Printf("Total coins: %d", totalCoins)
 	ifrate := GetInflationRate(float64(totalCoins), reward)
 	ifrate = ifrate * 100 / 1
-	log.Printf("Current inflation rate: %.2f", ifrate)
+	log.Printf("Current inflation rate: %.2f%%", ifrate)
 	log.Printf("Remaining coins to mine: %d", GetRemainingCoins(int64(totalCoins)))
 
 	price, err := GetBitfinexLastPrice()
@@ -39,6 +45,6 @@ func main() {
 		log.Fatal(err)
 	}
 	marketCap, _ := GetMarketCap(int64(totalCoins))
-	log.Printf("Market cap: $%d USD", int64(marketCap))
-	log.Printf("Block reward value: $%v USD", reward*price)
+	log.Printf("Market cap: $%.2f USD", marketCap)
+	log.Printf("Block reward value: $%.2f USD", reward*price)
 }

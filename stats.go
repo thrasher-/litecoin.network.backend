@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"math"
 	"net/url"
 
@@ -12,6 +13,7 @@ const (
 	blockHalvingSubsidy int64 = 840000
 	blockStartingReward int64 = 50
 	blocksPerDay              = (60 / 2.5) * 24
+	daysPerYear               = 365.2425
 )
 
 func GetHalvings(blocks int64) int64 {
@@ -84,4 +86,32 @@ func GetMarketCap(coinCount int64) (float64, error) {
 }
 
 func GetHashrateDistribution() {
+}
+
+func GetEnergyConsumption() error {
+	A4Hashrate := 550         // MH/s
+	A4PowerConsumption := 750 // watts
+	A4Price := float64(3150)  //USD
+	avgPowerPerKW := float64(12)
+	totalHashrate, err := GetNetworkHashRate()
+	if err != nil {
+		return err
+	}
+
+	// convert to megahashes per second
+	totalHashrate = totalHashrate / 1000 / 1000
+	log.Printf("Calculations using most efficient scrypt chip (Innosilicon A4) Stats per unit. Hashrate: %d MH/s, Power consumption: %d Watts, Price per unit: $%.0f USD",
+		A4Hashrate, A4PowerConsumption, A4Price)
+	log.Printf("Using %.0f cents per kilowatt-hour (average price people in the U.S. pay for electricity is about 12 cents per kilowatt-hour)", avgPowerPerKW)
+	networkEquivA4MinerAmount := totalHashrate / float64(A4Hashrate)
+	networkPowerConsumption := networkEquivA4MinerAmount * float64(A4PowerConsumption)
+	log.Printf("Network hash rate A4 equiv: %.0f", networkEquivA4MinerAmount)
+	log.Printf("Mining infrastructure A4 equiv cost $%.2f", networkEquivA4MinerAmount*A4Price)
+	log.Printf("Network power consumption: %.2f Watts", networkPowerConsumption)
+	networkPowerConsumptionKW := networkPowerConsumption / 1000
+	log.Printf("Network power consumption: %.2f KWatts", networkPowerConsumptionKW)
+	log.Printf("Network energy cost per kilowatt-hour: $%.2f", networkPowerConsumptionKW*avgPowerPerKW/100)
+	log.Printf("Network energy cost per kilowatt-day: $%.2f", (networkPowerConsumptionKW*avgPowerPerKW/100)*24)
+	log.Printf("Network energy cost per kilowatt-year: $%.2f", (networkPowerConsumptionKW*avgPowerPerKW/100)*24*daysPerYear)
+	return nil
 }
