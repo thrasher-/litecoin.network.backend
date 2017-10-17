@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"math"
 	"net/url"
 
@@ -88,30 +87,28 @@ func GetMarketCap(coinCount int64) (float64, error) {
 func GetHashrateDistribution() {
 }
 
-func GetEnergyConsumption() error {
-	A4Hashrate := 550         // MH/s
-	A4PowerConsumption := 750 // watts
-	A4Price := float64(3150)  //USD
-	avgPowerPerKW := float64(12)
+func GetEnergyConsumption() (MiningCalculations, error) {
+	mc := MiningCalculations{}
+	mc.DeviceName = "Innosilicon A4"
+	mc.DeviceHashrate = 550         // MH/s
+	mc.DevicePowerConsumption = 750 // Watts
+	mc.DevicePriceUSD = 3150        // USD
+
+	mc.AvgCostPerKilowattCents = float64(12)
 	totalHashrate, err := GetNetworkHashRate()
 	if err != nil {
-		return err
+		return mc, err
 	}
 
 	// convert to megahashes per second
 	totalHashrate = totalHashrate / 1000 / 1000
-	log.Printf("Calculations using most efficient scrypt chip (Innosilicon A4) Stats per unit. Hashrate: %d MH/s, Power consumption: %d Watts, Price per unit: $%.0f USD",
-		A4Hashrate, A4PowerConsumption, A4Price)
-	log.Printf("Using %.0f cents per kilowatt-hour (average price people in the U.S. pay for electricity is about 12 cents per kilowatt-hour)", avgPowerPerKW)
-	networkEquivA4MinerAmount := totalHashrate / float64(A4Hashrate)
-	networkPowerConsumption := networkEquivA4MinerAmount * float64(A4PowerConsumption)
-	log.Printf("Network hash rate A4 equiv: %.0f", networkEquivA4MinerAmount)
-	log.Printf("Mining infrastructure A4 equiv cost $%.2f", networkEquivA4MinerAmount*A4Price)
-	log.Printf("Network power consumption: %.2f Watts", networkPowerConsumption)
-	networkPowerConsumptionKW := networkPowerConsumption / 1000
-	log.Printf("Network power consumption: %.2f KWatts", networkPowerConsumptionKW)
-	log.Printf("Network energy cost per kilowatt-hour: $%.2f", networkPowerConsumptionKW*avgPowerPerKW/100)
-	log.Printf("Network energy cost per kilowatt-day: $%.2f", (networkPowerConsumptionKW*avgPowerPerKW/100)*24)
-	log.Printf("Network energy cost per kilowatt-year: $%.2f", (networkPowerConsumptionKW*avgPowerPerKW/100)*24*daysPerYear)
-	return nil
+	mc.DeviceNetworkHashrateEquivilant = totalHashrate / float64(mc.DeviceHashrate)
+	mc.MiningInfrastructureCost = mc.DeviceNetworkHashrateEquivilant * mc.DevicePriceUSD
+	mc.MiningInfrastructureCost51Attack = mc.MiningInfrastructureCost / 2
+	mc.NetworkPowerConsumptionWatts = mc.DeviceNetworkHashrateEquivilant * float64(mc.DevicePowerConsumption)
+	mc.NetworkPowerConsumptionKWatts = mc.NetworkPowerConsumptionWatts / 1000
+	mc.NetworkPowerCostKilowattHour = mc.NetworkPowerConsumptionKWatts * mc.AvgCostPerKilowattCents / 100
+	mc.NetworkPowerCostKilowattDay = (mc.NetworkPowerConsumptionKWatts * mc.AvgCostPerKilowattCents / 100) * 24
+	mc.NetworkPowerCostKilowattYear = (mc.NetworkPowerConsumptionKWatts * mc.AvgCostPerKilowattCents / 100) * 24 * daysPerYear
+	return mc, nil
 }

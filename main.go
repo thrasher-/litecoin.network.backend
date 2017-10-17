@@ -1,50 +1,65 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 )
 
 func main() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		data, err := json.MarshalIndent(GenerateOutput(), "", "\t")
+		if err != nil {
+			panic(err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(data)
+	})
+
+	log.Println("Starting HTTP server on port http://localhost:8444")
+	log.Fatal(http.ListenAndServe(":8444", nil))
+}
+
+func GenerateOutput() Output {
+	var op Output
 	bi, err := TestBlockHeight()
 	if err != nil {
 		log.Fatal(err)
 	}
+	op.BlockInformation = bi
 
-	err = GetEnergyConsumption()
+	mc, err := GetEnergyConsumption()
 	if err != nil {
 		log.Fatal(err)
 	}
+	op.MiningInfo = mc
 
 	difficulty, err := GetDifficulty()
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Network Difficulty: %v", difficulty)
+	op.NetworkDifficulty = difficulty
 
 	hashrate, err := GetNetworkHashRate()
 	if err != nil {
 		log.Fatal(err)
 	}
-	hashrate = hashrate / 1000 / 1000 / 1000 / 1000
-	log.Printf("Network Hashrate: %f TH/s", hashrate)
-	height := bi.BlockHeight
-	log.Printf("Height: %d\n", height)
-	log.Printf("Block reward halvings: %d\n", GetHalvings(height))
-	log.Printf("Remaining blocks until halving: %d\n", GetRemainingBlocks(height))
-	reward := GetRewardPerBlock(height)
-	log.Printf("Current block reward: %v\n", reward)
-	totalCoins := GetTotalCoins(height)
-	log.Printf("Total coins: %d", totalCoins)
-	ifrate := GetInflationRate(float64(totalCoins), reward)
+	op.NetworkHashrate = hashrate
+	op.NetworkHashrateTH = hashrate / 1000 / 1000 / 1000 / 1000
+	op.BlockRewardHalvings = GetHalvings(op.BlockInformation.BlockHeight)
+	op.RemainingBlocksHalving = GetRemainingBlocks(op.BlockInformation.BlockHeight)
+	reward := GetRewardPerBlock(op.BlockInformation.BlockHeight)
+	op.BlockRewardCoins = reward
+	op.CoinsTotal = GetTotalCoins(op.BlockInformation.BlockHeight)
+	ifrate := GetInflationRate(float64(op.CoinsTotal), reward)
 	ifrate = ifrate * 100 / 1
-	log.Printf("Current inflation rate: %.2f%%", ifrate)
-	log.Printf("Remaining coins to mine: %d", GetRemainingCoins(int64(totalCoins)))
-
+	op.InflationRate = ifrate
+	op.CoinsRemaining = GetRemainingCoins(int64(op.CoinsTotal))
 	price, err := GetBitfinexLastPrice()
 	if err != nil {
 		log.Fatal(err)
 	}
-	marketCap, _ := GetMarketCap(int64(totalCoins))
-	log.Printf("Market cap: $%.2f USD", marketCap)
-	log.Printf("Block reward value: $%.2f USD", reward*price)
+	op.MarketCap = float64(op.CoinsTotal) * price
+	op.BlockRewardUSD = reward * price
+	return op
 }
